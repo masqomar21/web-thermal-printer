@@ -1,14 +1,12 @@
 import { io } from "socket.io-client";
 import { testPrint } from "./services/testPrint.js";
 import { generateScreenshot } from "./services/genFile.js";
-import { printTicket } from "./services/printEscpos.js";
+import { printTicket, printTicketFromData } from "./services/printEscpos.js";
 
-import "dotenv";
-
-dotenv.config();
+import "dotenv/config";
 
 // Buat koneksi dengan reconnect aktif
-const socket = io(process.env.SOCKET_SERVER_URL | "http://localhost:3000");
+const socket = io("https://be.simpuskes.com");
 
 // Saat berhasil connect
 let cekPrinter = false;
@@ -30,9 +28,10 @@ socket.on("antrean_print", async (msg, ack) => {
   const start = new Date();
   console.log("📩 antrean_print diterima:", msg);
 
-  const fileURLToPath = await generateScreenshot(data);
-  console.log("Screenshot generated at:", fileURLToPath);
-  await printTicket(fileURLToPath);
+  // const fileURLToPath = await generateScreenshot(msg);
+  // console.log("Screenshot generated at:", fileURLToPath);
+  // await printTicket(fileURLToPath);
+  await printTicketFromData(msg);
 
   // Proses print, screenshot, dsb (asynchronous boleh pakai await di sini)
 

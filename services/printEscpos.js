@@ -75,5 +75,51 @@ async function printTicket(pathToScreenshot) {
     initPrinter();
   }
 }
+async function printTicketFromData(data) {
+  console.log(data);
+  try {
+    if (!device || !printer) {
+      throw new Error("Printer not connected. Retrying on the next print.");
+    }
 
-export { printTicket };
+    device.open((err) => {
+      if (err) {
+        console.error("Error opening device:", err);
+        socket.emit(baseConfig.socket.topik.status, {
+          status: "printer_error",
+          message: err.message,
+        });
+        initPrinter();
+        return;
+      }
+
+      printer
+        .font("A")
+        .align("CT")
+        .size(0, 1)
+        .text("Loket : " + data.loket)
+        .text("\n")
+        .size(2, 2)
+        .text(data.nomor_antrean)
+        .text("\n")
+        .size(0, 0.5)
+        .text("Tanggal : " + data.tanggal)
+        .text("Jam : " + data.jam)
+        .cut()
+        .close();
+
+      // cleanUp([pathToScreenshot, tempImagePath]);
+      socket.emit(baseConfig.socket.topik.status, { status: "printed" });
+    });
+  } catch (error) {
+    console.error("Error mencetak tiket:", error);
+    socket.emit(baseConfig.socket.topik.status, {
+      status: "error",
+      message: error.message,
+    });
+
+    initPrinter();
+  }
+}
+
+export { printTicket, printTicketFromData };
