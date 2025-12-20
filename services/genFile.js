@@ -27,14 +27,14 @@ async function generateScreenshot(data) {
   const logoDataURL = `data:image/png;base64,${logoBase64}`;
 
   const htmlContent = html
-    .replace("{{logo}}", `<img src="${logoDataURL}" alt="Logo">`)
-    .replace("{{instansi}}", data.instansi)
-    .replace("{{layanan}}", data.layanan)
+    // .replace("{{logo}}", `<img src="${logoDataURL}" alt="Logo">`)
+    // .replace("{{instansi}}", data.instansi)
+    .replace("{{loket}}", data.loket)
     .replace("{{nomor_antrean}}", data.nomor_antrean)
     .replace("{{date}}", data.tanggal)
-    .replace("{{time}}", data.jam)
-    .replace("{{loket_name}}", data.loket)
-    .replace("{{web_url}}", baseConfig.web_url ?? "-");
+    .replace("{{time}}", data.jam);
+  // .replace("{{loket_name}}", data.loket)
+  // .replace("{{web_url}}", baseConfig.web_url ?? "-");
 
   const browser = await puppeteer.launch();
   const page = await browser.newPage();

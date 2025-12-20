@@ -12,15 +12,15 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.2.3",
     "escpos": "^3.0.0-alpha.6",
     "escpos-usb": "^3.0.0-alpha.4",
-    "puppeteer": "^24.1.0",
-    "sharp": "^0.33.5",
-    "socket.io-client": "^4.7.5",
-    "usb": "1.8.0"
+    "puppeteer": "^24.34.0",
+    "sharp": "^0.34.5",
+    "socket.io-client": "^4.8.1",
+    "usb": "2.16.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.11"
   }
 }

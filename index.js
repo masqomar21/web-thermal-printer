@@ -3,8 +3,12 @@ import { testPrint } from "./services/testPrint.js";
 import { generateScreenshot } from "./services/genFile.js";
 import { printTicket } from "./services/printEscpos.js";
 
+import "dotenv";
+
+dotenv.config();
+
 // Buat koneksi dengan reconnect aktif
-const socket = io("https://backend-mpp.newus.id");
+const socket = io(process.env.SOCKET_SERVER_URL | "http://localhost:3000");
 
 // Saat berhasil connect
 let cekPrinter = false;
