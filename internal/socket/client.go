@@ -27,6 +27,12 @@ type Client struct {
 	reconnectSec time.Duration
 }
 
+type engineIOHandshake struct {
+	Sid          string `json:"sid"`
+	PingInterval int    `json:"pingInterval"`
+	PingTimeout  int    `json:"pingTimeout"`
+}
+
 func NewClient(cfg config.SocketConfig, handler TicketHandlerFunc) *Client {
 	interval := cfg.ReconnectIntervalMs
 	if interval <= 0 {
@@ -73,11 +79,15 @@ func (c *Client) connectLoop() {
 			}
 			log.Println("✅ Connected to Socket.IO server!")
 
-			// Read loop
+			// Read loop (blocks until connection disconnects)
 			c.readLoop()
 
 			c.mu.Lock()
 			c.isConnected = false
+			if c.conn != nil {
+				c.conn.Close()
+				c.conn = nil
+			}
 			c.mu.Unlock()
 
 			log.Printf("🔴 Connection lost. Reconnecting in %v...", c.reconnectSec)
@@ -114,18 +124,43 @@ func (c *Client) connect() error {
 		return err
 	}
 
+	// 1. Read Engine.IO Open Handshake packet ("0{...}")
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_, msg, err := conn.ReadMessage()
+	_ = conn.SetReadDeadline(time.Time{})
+
+	if err == nil {
+		msgStr := string(msg)
+		if strings.HasPrefix(msgStr, "0") {
+			var handshake engineIOHandshake
+			if err := json.Unmarshal([]byte(msgStr[1:]), &handshake); err == nil && handshake.PingInterval > 0 {
+				log.Printf("⚙️ Engine.IO Handshake parsed: PingInterval = %dms, PingTimeout = %dms", handshake.PingInterval, handshake.PingTimeout)
+			}
+		}
+	}
+
+	// 2. Configure WebSocket Pong/Ping Keep-Alive handlers
+	conn.SetPongHandler(func(string) error {
+		_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
+		return nil
+	})
+	conn.SetPingHandler(func(appData string) error {
+		_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
+		return conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(5*time.Second))
+	})
+
 	c.mu.Lock()
 	c.conn = conn
 	c.isConnected = true
 	c.mu.Unlock()
 
-	// Send Engine.IO / Socket.IO initial connect message
+	// 3. Send Socket.IO Connect Packet ("40")
 	if err := conn.WriteMessage(websocket.TextMessage, []byte("40")); err != nil {
 		conn.Close()
 		return err
 	}
 
-	// Send status connected event
+	// 4. Emit status connected event
 	c.EmitStatus("connected", "Go Ticket Printer Connected")
 
 	return nil
@@ -133,6 +168,7 @@ func (c *Client) connect() error {
 
 func (c *Client) readLoop() {
 	for {
+		_ = c.conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Printf("⚠️ Socket read error: %v", err)
@@ -145,8 +181,11 @@ func (c *Client) readLoop() {
 }
 
 func (c *Client) handlePacket(packet string) {
-	if packet == "2" { // Engine.IO Ping
-		c.sendRaw("3") // Engine.IO Pong
+	if packet == "2" { // Engine.IO Ping from server
+		c.sendRaw("3") // Engine.IO Pong response
+		return
+	}
+	if packet == "3" { // Engine.IO Pong from server
 		return
 	}
 
@@ -162,7 +201,6 @@ func (c *Client) parseAndHandleEvent(payload string) {
 	var ackID string
 	dataStr := payload
 
-	// Check if there is an ACK ID attached e.g. 1["antrean_print", {...}]
 	if match := ackRegex.FindStringSubmatch(payload); len(match) == 3 {
 		ackID = match[1]
 		dataStr = "[" + match[2] + "]"
@@ -186,7 +224,6 @@ func (c *Client) parseAndHandleEvent(payload string) {
 			if err := json.Unmarshal(rawArray[1], &ticket); err == nil {
 				log.Printf("🖨️ Ticket print payload: %+v", ticket)
 
-				// Invoke print handler
 				if c.handler != nil {
 					err := c.handler(ticket)
 					if err != nil {
@@ -198,7 +235,6 @@ func (c *Client) parseAndHandleEvent(payload string) {
 					}
 				}
 
-				// Send ACK response back if requested
 				if ackID != "" {
 					c.sendAck(ackID, "ok")
 				}
