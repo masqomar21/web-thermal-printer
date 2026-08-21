@@ -82,10 +82,6 @@ func main() {
 			binaryName:            outputPath,
 			testBinaryName:        testOutputPath,
 			".env.example":        ".env.example",
-			"config.json.example": "config.json.example",
-			"README.md":           "README.md",
-			"run.bat":             "run.bat",
-			"test.bat":            "test.bat",
 		}
 
 		if err := createZip(zipPath, filesToZip); err != nil {
