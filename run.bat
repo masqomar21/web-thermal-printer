@@ -1,2 +1,4 @@
 @echo off
-npm start || pause
+echo Building and Starting Antrean Ticket Printer Go Service...
+go run ./cmd/ticket-printer
+pause

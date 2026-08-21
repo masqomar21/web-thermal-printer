@@ -1,2 +1,5 @@
 node_modules/
 temp/
+ticket-printer
+ticket-printer.exe
+.env

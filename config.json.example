@@ -1,0 +1,20 @@
+{
+  "web_url": "",
+  "socket": {
+    "url": "https://be.simpuskes.com",
+    "topic_print_nomor_antrean": "antrean_print",
+    "topic_status": "status",
+    "reconnect_interval_ms": 5000
+  },
+  "printer": {
+    "type": "usb",
+    "render_mode": "text",
+    "vendor_id": 0,
+    "product_id": 0,
+    "ip_address": "192.168.1.200:9100",
+    "serial_port": "COM3",
+    "baud_rate": 9600,
+    "system_printer_name": "",
+    "paper_width_dots": 576
+  }
+}
