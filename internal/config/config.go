@@ -51,7 +51,7 @@ func LoadConfig() (*AppConfig, error) {
 			VendorID:       getEnvHex16("PRINTER_VENDOR_ID", 0),
 			ProductID:      getEnvHex16("PRINTER_PRODUCT_ID", 0),
 			IPAddress:      getEnv("PRINTER_IP", "192.168.1.200:9100"),
-			SerialPort:     getEnv("PRINTER_SERIAL_PORT", "COM3"),
+			SerialPort:     getEnv("PRINTER_SERIAL_PORT", ""),
 			BaudRate:       getEnvInt("PRINTER_BAUD_RATE", 9600),
 			SystemPrinter:  getEnv("PRINTER_SYSTEM_NAME", ""),
 			RenderMode:     getEnv("PRINTER_RENDER_MODE", "both"), // "text", "image", or "both"

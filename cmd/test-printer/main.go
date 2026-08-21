@@ -91,6 +91,8 @@ func displayCurrentConfig(pCfg config.PrinterConfig) {
 	if pCfg.Type == "file" || pCfg.Type == "raw" || pCfg.Type == "device" || pCfg.Type == "usb" {
 		if pCfg.SerialPort != "" {
 			fmt.Printf("   • Port / Path Device  : %s\n", pCfg.SerialPort)
+		} else {
+			fmt.Println("   • Port / Path Device  : AUTO-DETECT (USB)")
 		}
 		if pCfg.VendorID != 0 || pCfg.ProductID != 0 {
 			fmt.Printf("   • USB Vendor/Product  : 0x%04X : 0x%04X\n", pCfg.VendorID, pCfg.ProductID)
