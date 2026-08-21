@@ -45,11 +45,15 @@ PRINTER_SERIAL_PORT="COM3"
 
 ---
 
-## Usage
+---
 
-Start the application:
+## Usage & Testing
+
+### 1. Main Service (Socket.IO Print Service)
+Start the production service:
 
 ```bash
+go build -o ticket-printer ./cmd
 ./ticket-printer
 ```
 
@@ -57,6 +61,20 @@ or on Windows:
 
 ```cmd
 run.bat
+```
+
+### 2. Printer Test Utility (Interactive CLI)
+Test printer connectivity and print sample tickets without connecting to Socket.IO:
+
+```bash
+# Interactive test runner
+./test.sh
+```
+
+or on Windows:
+
+```cmd
+test.bat
 ```
 
 ---

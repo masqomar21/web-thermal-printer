@@ -41,11 +41,13 @@ func main() {
 
 	for _, target := range targets {
 		binaryName := "printerRunner" + target.Ext
+		testBinaryName := "printerTest" + target.Ext
 		outputPath := filepath.Join(tempDir, binaryName)
+		testOutputPath := filepath.Join(tempDir, testBinaryName)
 
-		log.Printf("🔨 Building for %s/%s -> %s...", target.OS, target.Arch, binaryName)
+		log.Printf("🔨 Building for %s/%s -> %s & %s...", target.OS, target.Arch, binaryName, testBinaryName)
 
-		cmd := exec.Command("go", "build", "-trimpath", "-ldflags", "-s -w", "-o", outputPath, "./cmd/ticket-printer")
+		cmd := exec.Command("go", "build", "-trimpath", "-ldflags", "-s -w", "-o", outputPath, "./cmd")
 		cmd.Env = append(os.Environ(),
 			"GOOS="+target.OS,
 			"GOARCH="+target.Arch,
@@ -55,7 +57,20 @@ func main() {
 		cmd.Stderr = os.Stderr
 
 		if err := cmd.Run(); err != nil {
-			log.Fatalf("❌ Build failed for %s/%s: %v", target.OS, target.Arch, err)
+			log.Fatalf("❌ Build failed for %s/%s (%s): %v", target.OS, target.Arch, binaryName, err)
+		}
+
+		cmdTest := exec.Command("go", "build", "-trimpath", "-ldflags", "-s -w", "-o", testOutputPath, "./cmd/test-printer")
+		cmdTest.Env = append(os.Environ(),
+			"GOOS="+target.OS,
+			"GOARCH="+target.Arch,
+			"CGO_ENABLED=0",
+		)
+		cmdTest.Stdout = os.Stdout
+		cmdTest.Stderr = os.Stderr
+
+		if err := cmdTest.Run(); err != nil {
+			log.Fatalf("❌ Build failed for %s/%s (%s): %v", target.OS, target.Arch, testBinaryName, err)
 		}
 
 		zipName := fmt.Sprintf("printerRunner-%s-%s.zip", target.OS, target.Arch)
@@ -65,10 +80,12 @@ func main() {
 
 		filesToZip := map[string]string{
 			binaryName:            outputPath,
+			testBinaryName:        testOutputPath,
 			".env.example":        ".env.example",
 			"config.json.example": "config.json.example",
 			"README.md":           "README.md",
 			"run.bat":             "run.bat",
+			"test.bat":            "test.bat",
 		}
 
 		if err := createZip(zipPath, filesToZip); err != nil {
