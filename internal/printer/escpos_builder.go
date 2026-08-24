@@ -116,6 +116,94 @@ func (b *ESCPOSBuilder) RasterImage(img image.Image) *ESCPOSBuilder {
 	return b
 }
 
+func (b *ESCPOSBuilder) Divider(char string, lineLength int) *ESCPOSBuilder {
+	if char == "" {
+		char = "-"
+	}
+	if lineLength <= 0 {
+		lineLength = 32 // default 58mm text width
+	}
+	line := ""
+	for len(line) < lineLength {
+		line += char
+	}
+	if len(line) > lineLength {
+		line = line[:lineLength]
+	}
+	b.buf.WriteString(line + "\n")
+	return b
+}
+
+func (b *ESCPOSBuilder) TableLine(left, right string, totalWidth int) *ESCPOSBuilder {
+	if totalWidth <= 0 {
+		totalWidth = 32
+	}
+	spaceNeeded := totalWidth - len(left) - len(right)
+	if spaceNeeded <= 0 {
+		b.buf.WriteString(left + " " + right + "\n")
+		return b
+	}
+	spaces := ""
+	for i := 0; i < spaceNeeded; i++ {
+		spaces += " "
+	}
+	b.buf.WriteString(left + spaces + right + "\n")
+	return b
+}
+
+func (b *ESCPOSBuilder) QRCode(content string, moduleSize int) *ESCPOSBuilder {
+	if content == "" {
+		return b
+	}
+	if moduleSize <= 0 {
+		moduleSize = 4
+	}
+	if moduleSize > 16 {
+		moduleSize = 16
+	}
+
+	dataLen := len(content) + 3
+	pL := byte(dataLen % 256)
+	pH := byte(dataLen / 256)
+
+	// 1. Model: GS ( k 4 0 49 65 50 0 (Model 2)
+	b.buf.Write([]byte{0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00})
+	// 2. Size: GS ( k 3 0 49 67 <size>
+	b.buf.Write([]byte{0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, byte(moduleSize)})
+	// 3. Error Correction L: GS ( k 3 0 49 69 48
+	b.buf.Write([]byte{0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30})
+	// 4. Store Data: GS ( k pL pH 49 80 48 <data>
+	b.buf.Write([]byte{0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30})
+	b.buf.WriteString(content)
+	// 5. Print QR: GS ( k 3 0 49 81 48
+	b.buf.Write([]byte{0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30})
+	b.buf.WriteByte('\n')
+
+	return b
+}
+
+func (b *ESCPOSBuilder) BarcodeCODE128(content string) *ESCPOSBuilder {
+	if content == "" {
+		return b
+	}
+	// GS h 60 (Height)
+	b.buf.Write([]byte{0x1D, 0x68, 0x3C})
+	// GS w 2 (Width)
+	b.buf.Write([]byte{0x1D, 0x77, 0x02})
+	// GS H 2 (Text below)
+	b.buf.Write([]byte{0x1D, 0x48, 0x02})
+
+	// CODE128 command: GS k 73 <length> {CODE B} <content>
+	encoded := "{B" + content
+	dataLen := byte(len(encoded))
+	b.buf.Write([]byte{0x1D, 0x6B, 0x49, dataLen})
+	b.buf.WriteString(encoded)
+	b.buf.WriteByte('\n')
+
+	return b
+}
+
 func (b *ESCPOSBuilder) Bytes() []byte {
 	return b.buf.Bytes()
 }
+

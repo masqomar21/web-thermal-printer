@@ -15,3 +15,9 @@ type PrintStatusPayload struct {
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
 }
+
+// ToDocument converts TicketData into a generic PrintDocument
+func (t TicketData) ToDocument() PrintDocument {
+	return TicketDataToDocument(t)
+}
+
