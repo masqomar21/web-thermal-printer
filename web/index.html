@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thermal Printer WASM Gateway - Demo & Test Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --card-border: #334155;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
+        --accent-cyan: #06b6d4;
+        --success: #10b981;
+        --danger: #ef4444;
+        --font-sans: "Inter", system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        font-family: var(--font-sans);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1rem;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 960px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 0.5rem;
+      }
+
+      header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #818cf8, #c084fc, #38bdf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+      }
+
+      header p {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      }
+
+      .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: #334155;
+        color: var(--text-muted);
+      }
+
+      .status-badge.connected {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--success);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-muted);
+      }
+
+      .status-badge.connected .status-dot {
+        background: var(--success);
+        box-shadow: 0 0 8px var(--success);
+      }
+
+      .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      button {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        padding: 0.7rem 1.2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      button:hover:not(:disabled) {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      button.btn-cyan {
+        background: var(--accent-cyan);
+        color: #0f172a;
+      }
+
+      button.btn-cyan:hover:not(:disabled) {
+        background: #22d3ee;
+      }
+
+      button.btn-outline {
+        background: transparent;
+        border: 1px solid var(--card-border);
+        color: var(--text-main);
+      }
+
+      button.btn-outline:hover:not(:disabled) {
+        background: #334155;
+      }
+
+      button.btn-danger {
+        background: var(--danger);
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+
+      .form-group label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+
+      .form-group input {
+        background: #0f172a;
+        border: 1px solid var(--card-border);
+        color: var(--text-main);
+        padding: 0.6rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
+
+      .log-box {
+        background: #090d16;
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        height: 200px;
+        overflow-y: auto;
+        color: #38bdf8;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+
+      .log-entry {
+        line-height: 1.4;
+      }
+
+      .log-entry.error {
+        color: #f87171;
+      }
+
+      .log-entry.success {
+        color: #4ade80;
+      }
+
+      canvas {
+        background: #ffffff;
+        border-radius: 4px;
+        margin-top: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🖨️ Thermal Printer WASM Gateway</h1>
+        <p>
+          Native Browser Thermal Printing via Web Serial & Web USB (Pure SaaS,
+          Zero Background App)
+        </p>
+      </header>
+
+      <!-- Connection Card -->
+      <div class="card">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+          "
+        >
+          <div class="card-title">🔌 Printer Connection</div>
+          <div id="statusBadge" class="status-badge">
+            <span class="status-dot"></span>
+            <span id="statusText">Disconnected</span>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button id="btnConnectSerial">
+            🔌 Connect Web Serial (Recommended)
+          </button>
+          <button id="btnConnectUSB" class="btn-cyan">
+            🔌 Connect Web USB
+          </button>
+          <button id="btnTestPrint" class="btn-outline" disabled>
+            🧪 Test Print
+          </button>
+          <button id="btnDisconnect" class="btn-danger" disabled>
+            🛑 Disconnect
+          </button>
+        </div>
+      </div>
+
+      <!-- Ticket Form & Actions -->
+      <div class="card">
+        <div class="card-title">🎟️ Queue Ticket Data</div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nama Instansi / Klinik</label>
+            <input
+              type="text"
+              id="inputInstansi"
+              value="PUSKESMAS MAJU SEHAT"
+            />
+          </div>
+          <div class="form-group">
+            <label>Loket / Poli</label>
+            <input type="text" id="inputLoket" value="LOKET 1 - POLI UMUM" />
+          </div>
+          <div class="form-group">
+            <label>Nomor Antrean</label>
+            <input type="text" id="inputNomor" value="A-015" />
+          </div>
+          <div class="form-group">
+            <label>Layanan</label>
+            <input
+              type="text"
+              id="inputLayanan"
+              value="Pemeriksaan Kesehatan"
+            />
+          </div>
+          <div class="form-group">
+            <label>Tanggal</label>
+            <input type="text" id="inputTanggal" value="24/08/2026" />
+          </div>
+          <div class="form-group">
+            <label>Jam</label>
+            <input type="text" id="inputJam" value="10:45 WIB" />
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button id="btnPrintText" disabled>
+            ⚡ Print Ticket (Text ESC/POS)
+          </button>
+          <button id="btnPrintRaster" class="btn-cyan" disabled>
+            🖼️ Print Ticket (Graphic Raster)
+          </button>
+          <button id="btnPrintCanvas" class="btn-outline" disabled>
+            🎨 Print HTML5 Canvas
+          </button>
+        </div>
+
+        <div style="margin-top: 1rem">
+          <p
+            style="
+              font-size: 0.8rem;
+              color: var(--text-muted);
+              margin-bottom: 0.3rem;
+            "
+          >
+            Preview Canvas Raster:
+          </p>
+          <canvas id="previewCanvas" width="384" height="120"></canvas>
+        </div>
+      </div>
+
+      <!-- Console Log Card -->
+      <div class="card">
+        <div class="card-title">💻 Operation Logs</div>
+        <div id="logBox" class="log-box">
+          <div class="log-entry">Initializing WASM printer engine...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load Go WASM Runtime & SDK -->
+    <script src="wasm_exec.js"></script>
+    <script src="printer-sdk.js"></script>
+
+    <script>
+      const printer = new ThermalPrinterSDK();
+
+      const logBox = document.getElementById("logBox");
+      const statusBadge = document.getElementById("statusBadge");
+      const statusText = document.getElementById("statusText");
+
+      const btnConnectSerial = document.getElementById("btnConnectSerial");
+      const btnConnectUSB = document.getElementById("btnConnectUSB");
+      const btnTestPrint = document.getElementById("btnTestPrint");
+      const btnDisconnect = document.getElementById("btnDisconnect");
+
+      const btnPrintText = document.getElementById("btnPrintText");
+      const btnPrintRaster = document.getElementById("btnPrintRaster");
+      const btnPrintCanvas = document.getElementById("btnPrintCanvas");
+
+      function log(msg, type = "info") {
+        const entry = document.createElement("div");
+        entry.className = `log-entry ${type}`;
+        const time = new Date().toLocaleTimeString();
+        entry.textContent = `[${time}] ${msg}`;
+        logBox.appendChild(entry);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      function updateUIStatus() {
+        const status = printer.getStatus();
+        if (status.connected) {
+          statusBadge.classList.add("connected");
+          statusText.textContent = `Connected (${status.mode.toUpperCase()})`;
+          btnTestPrint.disabled = false;
+          btnDisconnect.disabled = false;
+          btnPrintText.disabled = false;
+          btnPrintRaster.disabled = false;
+          btnPrintCanvas.disabled = false;
+        } else {
+          statusBadge.classList.remove("connected");
+          statusText.textContent = "Disconnected";
+          btnTestPrint.disabled = true;
+          btnDisconnect.disabled = true;
+          btnPrintText.disabled = true;
+          btnPrintRaster.disabled = true;
+          btnPrintCanvas.disabled = true;
+        }
+      }
+
+      // Initialize Canvas Sample Preview
+      function drawSampleCanvas() {
+        const canvas = document.getElementById("previewCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#000000";
+        ctx.font = "bold 16px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("CANVAS SAMPLE TICKET", canvas.width / 2, 30);
+
+        ctx.font = "bold 36px monospace";
+        ctx.fillText("B-099", canvas.width / 2, 75);
+
+        ctx.font = "12px Inter, sans-serif";
+        ctx.fillText("Powered by Go WASM Web Gateway", canvas.width / 2, 105);
+      }
+
+      async function initApp() {
+        try {
+          await printer.init("./printer.wasm");
+          log("Go WASM Engine loaded ready.", "success");
+          drawSampleCanvas();
+        } catch (err) {
+          log(`Failed to init WASM: ${err.message}`, "error");
+        }
+      }
+
+      btnConnectSerial.addEventListener("click", async () => {
+        try {
+          log("Requesting Web Serial port permission...");
+          await printer.connectSerial(9600);
+          log("Web Serial printer connected successfully!", "success");
+          updateUIStatus();
+        } catch (err) {
+          log(`Web Serial Connection Error: ${err.message || err}`, "error");
+        }
+      });
+
+      btnConnectUSB.addEventListener("click", async () => {
+        try {
+          log("Requesting Web USB device permission...");
+          await printer.connectUSB(1);
+          log("Web USB printer connected successfully!", "success");
+          updateUIStatus();
+        } catch (err) {
+          log(`Web USB Connection Error: ${err.message || err}`, "error");
+        }
+      });
+
+      btnTestPrint.addEventListener("click", async () => {
+        try {
+          log("Sending test print...");
+          await printer.testPrint();
+          log("Test print command executed successfully!", "success");
+        } catch (err) {
+          log(`Test Print Error: ${err.message || err}`, "error");
+        }
+      });
+
+      btnDisconnect.addEventListener("click", async () => {
+        try {
+          await printer.close();
+          log("Printer disconnected.");
+          updateUIStatus();
+        } catch (err) {
+          log(`Disconnect Error: ${err.message || err}`, "error");
+        }
+      });
+
+      function getTicketFormData() {
+        return {
+          instansi: document.getElementById("inputInstansi").value,
+          loket: document.getElementById("inputLoket").value,
+          nomor_antrean: document.getElementById("inputNomor").value,
+          layanan: document.getElementById("inputLayanan").value,
+          tanggal: document.getElementById("inputTanggal").value,
+          jam: document.getElementById("inputJam").value,
+        };
+      }
+
+      btnPrintText.addEventListener("click", async () => {
+        try {
+          const data = getTicketFormData();
+          log(`Printing Text Ticket: ${data.nomor_antrean}...`);
+          const bytesWritten = await printer.printTicket(data);
+          log(`Text Ticket printed (${bytesWritten} bytes sent)`, "success");
+        } catch (err) {
+          log(`Print Text Error: ${err.message || err}`, "error");
+        }
+      });
+
+      btnPrintRaster.addEventListener("click", async () => {
+        try {
+          const data = getTicketFormData();
+          log(`Printing Graphic Raster Ticket: ${data.nomor_antrean}...`);
+          const bytesWritten = await printer.printTicketImage(data, 576);
+          log(`Graphic Ticket printed (${bytesWritten} bytes sent)`, "success");
+        } catch (err) {
+          log(`Print Raster Error: ${err.message || err}`, "error");
+        }
+      });
+
+      btnPrintCanvas.addEventListener("click", async () => {
+        try {
+          log("Converting HTML5 Canvas to Base64 image...");
+          const canvas = document.getElementById("previewCanvas");
+          const b64 = canvas.toDataURL("image/png");
+          log("Sending Canvas raster image to printer...");
+          const bytesWritten = await printer.printImageBase64(b64);
+          log(`Canvas Image printed (${bytesWritten} bytes sent)`, "success");
+        } catch (err) {
+          log(`Print Canvas Error: ${err.message || err}`, "error");
+        }
+      });
+
+      window.addEventListener("load", initApp);
+    </script>
+  </body>
+</html>
