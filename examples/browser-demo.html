@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thermal Printer WASM - Browser Integration Example</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #0f172a;
+        color: #f8fafc;
+        padding: 2rem;
+      }
+      .card {
+        background: #1e293b;
+        padding: 1.5rem;
+        border-radius: 8px;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      button {
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        padding: 0.6rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-right: 0.5rem;
+        margin-top: 0.5rem;
+      }
+      button:hover {
+        background: #4f46e5;
+      }
+      pre {
+        background: #090d16;
+        padding: 1rem;
+        border-radius: 6px;
+        color: #38bdf8;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>🖨️ Thermal Printer WASM - Browser ES Module Example</h2>
+      <p>Zero-config WebAssembly thermal printer gateway integration.</p>
+
+      <div style="margin-top: 1rem">
+        <button id="btnUSB">🔌 Connect Web USB</button>
+        <button id="btnSerial">🔌 Connect Web Serial</button>
+        <button id="btnPrint">🖨️ Print Sample Receipt</button>
+      </div>
+
+      <pre id="log">Initializing SDK...</pre>
+    </div>
+
+    <!-- Import npm library module directly -->
+    <script type="module">
+      import { ThermalPrinterSDK } from "../dist/index.mjs";
+
+      const printer = new ThermalPrinterSDK();
+      const logEl = document.getElementById("log");
+
+      function log(msg) {
+        logEl.textContent += "\n" + msg;
+      }
+
+      async function init() {
+        try {
+          // Zero config WASM initialization
+          await printer.init();
+          log("✅ ThermalPrinterSDK loaded and initialized successfully!");
+        } catch (err) {
+          log("❌ Error initializing: " + err.message);
+        }
+      }
+
+      document.getElementById("btnUSB").onclick = async () => {
+        try {
+          await printer.connectUSB(1);
+          log("✅ Connected via Web USB!");
+        } catch (e) {
+          log("❌ USB Error: " + e.message);
+        }
+      };
+
+      document.getElementById("btnSerial").onclick = async () => {
+        try {
+          await printer.connectSerial(9600);
+          log("✅ Connected via Web Serial!");
+        } catch (e) {
+          log("❌ Serial Error: " + e.message);
+        }
+      };
+
+      document.getElementById("btnPrint").onclick = async () => {
+        try {
+          const bytes = await printer.print({
+            type: "text",
+            text: "TOKO MAJU BERSAMA\nJl. Merdeka No. 123\n--------------------\nTotal: Rp 50.000\n",
+            align: "center",
+            bold: true,
+            cut: true,
+            feed: 3,
+          });
+          log(`✅ Print success! Sent ${bytes} bytes.`);
+        } catch (e) {
+          log("❌ Print Error: " + e.message);
+        }
+      };
+
+      init();
+    </script>
+  </body>
+</html>
