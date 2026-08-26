@@ -32,6 +32,10 @@
   ],
   "author": "masqomar21",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masqomar21/web-thermal-printer.git"
+  },
   "devDependencies": {
     "esbuild": "^0.20.0",
     "typescript": "^5.3.3"

@@ -24,6 +24,13 @@ func main() {
 	sdkObj.Set("setSerialPort", js.FuncOf(setSerialPort))
 	sdkObj.Set("setUSBDevice", js.FuncOf(setUSBDevice))
 	sdkObj.Set("print", js.FuncOf(printUniversal))
+	sdkObj.Set("printText", js.FuncOf(printTextDirect))
+	sdkObj.Set("printImage", js.FuncOf(printImageDirect))
+	sdkObj.Set("printRaw", js.FuncOf(printRawDirect))
+	sdkObj.Set("printQRCode", js.FuncOf(printQRCodeDirect))
+	sdkObj.Set("printBarcode", js.FuncOf(printBarcodeDirect))
+	sdkObj.Set("printDivider", js.FuncOf(printDividerDirect))
+	sdkObj.Set("printTableLine", js.FuncOf(printTableLineDirect))
 	sdkObj.Set("testPrint", js.FuncOf(testPrint))
 	sdkObj.Set("close", js.FuncOf(closePrinter))
 	sdkObj.Set("getStatus", js.FuncOf(getStatus))
@@ -219,6 +226,138 @@ func printUniversal(this js.Value, args []js.Value) any {
 			}
 			resolve.Invoke(js.ValueOf(n))
 
+		case "qrcode":
+			content := ""
+			size := 4
+			align := "center"
+			cut := false
+
+			if !arg.Get("content").IsUndefined() {
+				content = arg.Get("content").String()
+			}
+			if !arg.Get("size").IsUndefined() {
+				size = arg.Get("size").Int()
+			}
+			if !arg.Get("align").IsUndefined() {
+				align = strings.ToLower(arg.Get("align").String())
+			}
+			if !arg.Get("cut").IsUndefined() {
+				cut = arg.Get("cut").Bool()
+			}
+
+			if content == "" {
+				reject.Invoke("qrcode content payload is required")
+				return
+			}
+
+			b := printer.NewESCPOSBuilder()
+			switch align {
+			case "center":
+				b.AlignCenter()
+			case "right":
+				b.AlignRight()
+			default:
+				b.AlignLeft()
+			}
+			b.QRCode(content, size)
+			if cut {
+				b.CutPaper()
+			}
+
+			n, err := globalPrinter.Write(b.Bytes())
+			if err != nil {
+				reject.Invoke(fmt.Sprintf("print qrcode failed: %v", err))
+				return
+			}
+			resolve.Invoke(js.ValueOf(n))
+
+		case "barcode":
+			content := ""
+			align := "center"
+			cut := false
+
+			if !arg.Get("content").IsUndefined() {
+				content = arg.Get("content").String()
+			}
+			if !arg.Get("align").IsUndefined() {
+				align = strings.ToLower(arg.Get("align").String())
+			}
+			if !arg.Get("cut").IsUndefined() {
+				cut = arg.Get("cut").Bool()
+			}
+
+			if content == "" {
+				reject.Invoke("barcode content payload is required")
+				return
+			}
+
+			b := printer.NewESCPOSBuilder()
+			switch align {
+			case "center":
+				b.AlignCenter()
+			case "right":
+				b.AlignRight()
+			default:
+				b.AlignLeft()
+			}
+			b.BarcodeCODE128(content)
+			if cut {
+				b.CutPaper()
+			}
+
+			n, err := globalPrinter.Write(b.Bytes())
+			if err != nil {
+				reject.Invoke(fmt.Sprintf("print barcode failed: %v", err))
+				return
+			}
+			resolve.Invoke(js.ValueOf(n))
+
+		case "divider":
+			char := "-"
+			width := 32
+
+			if !arg.Get("char").IsUndefined() {
+				char = arg.Get("char").String()
+			}
+			if !arg.Get("width").IsUndefined() {
+				width = arg.Get("width").Int()
+			}
+
+			b := printer.NewESCPOSBuilder()
+			b.Divider(char, width)
+
+			n, err := globalPrinter.Write(b.Bytes())
+			if err != nil {
+				reject.Invoke(fmt.Sprintf("print divider failed: %v", err))
+				return
+			}
+			resolve.Invoke(js.ValueOf(n))
+
+		case "table":
+			left := ""
+			right := ""
+			width := 32
+
+			if !arg.Get("left").IsUndefined() {
+				left = arg.Get("left").String()
+			}
+			if !arg.Get("right").IsUndefined() {
+				right = arg.Get("right").String()
+			}
+			if !arg.Get("width").IsUndefined() {
+				width = arg.Get("width").Int()
+			}
+
+			b := printer.NewESCPOSBuilder()
+			b.TableLine(left, right, width)
+
+			n, err := globalPrinter.Write(b.Bytes())
+			if err != nil {
+				reject.Invoke(fmt.Sprintf("print table failed: %v", err))
+				return
+			}
+			resolve.Invoke(js.ValueOf(n))
+
 		default: // "text"
 			textStr := ""
 			align := "left"
@@ -311,6 +450,92 @@ func getStatus(this js.Value, args []js.Value) any {
 	res.Set("name", globalPrinter.Name())
 	res.Set("connected", mode != "none")
 	return res
+}
+
+func printTextDirect(this js.Value, args []js.Value) any {
+	return printUniversal(this, args)
+}
+
+func printImageDirect(this js.Value, args []js.Value) any {
+	if len(args) > 0 && args[0].Type() == js.TypeString {
+		obj := js.Global().Get("Object").New()
+		obj.Set("type", "image")
+		obj.Set("base64", args[0])
+		return printUniversal(this, []js.Value{obj})
+	}
+	return printUniversal(this, args)
+}
+
+func printRawDirect(this js.Value, args []js.Value) any {
+	if len(args) > 0 {
+		obj := js.Global().Get("Object").New()
+		obj.Set("type", "raw")
+		obj.Set("bytes", args[0])
+		return printUniversal(this, []js.Value{obj})
+	}
+	return printUniversal(this, args)
+}
+
+func printQRCodeDirect(this js.Value, args []js.Value) any {
+	if len(args) > 0 && args[0].Type() == js.TypeString {
+		obj := js.Global().Get("Object").New()
+		obj.Set("type", "qrcode")
+		obj.Set("content", args[0])
+		if len(args) > 1 {
+			obj.Set("size", args[1])
+		}
+		if len(args) > 2 {
+			obj.Set("align", args[2])
+		}
+		if len(args) > 3 {
+			obj.Set("cut", args[3])
+		}
+		return printUniversal(this, []js.Value{obj})
+	}
+	return printUniversal(this, args)
+}
+
+func printBarcodeDirect(this js.Value, args []js.Value) any {
+	if len(args) > 0 && args[0].Type() == js.TypeString {
+		obj := js.Global().Get("Object").New()
+		obj.Set("type", "barcode")
+		obj.Set("content", args[0])
+		if len(args) > 1 {
+			obj.Set("align", args[1])
+		}
+		if len(args) > 2 {
+			obj.Set("cut", args[2])
+		}
+		return printUniversal(this, []js.Value{obj})
+	}
+	return printUniversal(this, args)
+}
+
+func printDividerDirect(this js.Value, args []js.Value) any {
+	obj := js.Global().Get("Object").New()
+	obj.Set("type", "divider")
+	if len(args) > 0 {
+		obj.Set("char", args[0])
+	}
+	if len(args) > 1 {
+		obj.Set("width", args[1])
+	}
+	return printUniversal(this, []js.Value{obj})
+}
+
+func printTableLineDirect(this js.Value, args []js.Value) any {
+	obj := js.Global().Get("Object").New()
+	obj.Set("type", "table")
+	if len(args) > 0 {
+		obj.Set("left", args[0])
+	}
+	if len(args) > 1 {
+		obj.Set("right", args[1])
+	}
+	if len(args) > 2 {
+		obj.Set("width", args[2])
+	}
+	return printUniversal(this, []js.Value{obj})
 }
 
 func awaitPromise(promise js.Value) (js.Value, error) {

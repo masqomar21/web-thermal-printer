@@ -1,6 +1,6 @@
-# API Reference - `thermal-printer-wasm`
+# API Reference - `web-thermal-printer`
 
-Complete reference documentation for classes, methods, and TypeScript interfaces provided by `thermal-printer-wasm`.
+Complete reference documentation for classes, methods, and TypeScript interfaces provided by `web-thermal-printer`.
 
 ---
 
@@ -9,7 +9,7 @@ Complete reference documentation for classes, methods, and TypeScript interfaces
 The primary class for managing WebAssembly printer initialization, hardware connection, and printing execution.
 
 ```typescript
-import { ThermalPrinterSDK } from 'thermal-printer-wasm';
+import { ThermalPrinterSDK, ESCPOSBuilder } from 'web-thermal-printer';
 
 const printer = new ThermalPrinterSDK();
 ```
@@ -25,6 +25,9 @@ Initializes the Go WebAssembly runtime and binds global JS functions.
 - **Returns**: `Promise<void>`
 - **Throws**: `Error` if WASM instantiation fails.
 
+#### `createBuilder(): ESCPOSBuilder`
+Creates a new chainable `ESCPOSBuilder` instance for constructing raw ESC/POS commands.
+
 #### `connectUSB(endpoint?: number): Promise<boolean>`
 Opens browser permission prompt to connect to a Web USB thermal printer. Must be called inside a user gesture handler (e.g. `click` listener).
 - **Parameters**:
@@ -37,94 +40,67 @@ Opens browser permission prompt to connect to a Web Serial Virtual COM port. Mus
   - `baudRate` *(optional)*: Baud rate in bps (default: `9600`).
 - **Returns**: `Promise<boolean>` — Resolves `true` when connected.
 
-#### `setUSBDevice(device: USBDevice, endpoint?: number): boolean`
-Attaches an existing pre-opened `USBDevice` object directly.
+#### `print(payload: PrintPayload | ESCPOSBuilder): Promise<number>`
+Sends print job payload or builder to printer.
 - **Parameters**:
-  - `device`: Native browser `USBDevice` object.
-  - `endpoint` *(optional)*: Bulk Out Endpoint Number (default: `1`).
-- **Returns**: `boolean`
-
-#### `setSerialPort(port: SerialPort): boolean`
-Attaches an existing pre-opened `SerialPort` object directly.
-- **Parameters**:
-  - `port`: Native browser `SerialPort` object.
-- **Returns**: `boolean`
-
-#### `print(payload: PrintPayload): Promise<number>`
-Sends print job payload to printer.
-- **Parameters**:
-  - `payload`: `PrintTextOptions | PrintImageOptions | PrintRawOptions | string | Uint8Array`
+  - `payload`: `PrintTextOptions | PrintImageOptions | PrintRawOptions | PrintQRCodeOptions | PrintBarcodeOptions | ESCPOSBuilder | string | Uint8Array`
 - **Returns**: `Promise<number>` — Number of raw bytes written to printer hardware.
 
-#### `testPrint(): Promise<boolean>`
-Executes a standard built-in ESC/POS test page print.
-- **Returns**: `Promise<boolean>`
+#### `printText(text: string, options?: PrintTextOptions): Promise<number>`
+Prints formatted text directly.
 
-#### `close(): Promise<boolean>`
-Closes active printer hardware port and resets connection state.
-- **Returns**: `Promise<boolean>`
+#### `printImage(base64: string): Promise<number>`
+Prints raster image from Base64 or Data URI directly.
 
-#### `getStatus(): PrinterStatus`
-Returns the current printer connection state synchronously.
-- **Returns**: `PrinterStatus` object.
+#### `printRaw(bytes: Uint8Array): Promise<number>`
+Prints raw ESC/POS command bytes directly.
+
+#### `printQRCode(content: string, size?: number, align?: 'left'|'center'|'right', cut?: boolean): Promise<number>`
+Prints hardware QR Code directly (`GS ( k`).
+
+#### `printBarcode(content: string, align?: 'left'|'center'|'right', cut?: boolean): Promise<number>`
+Prints CODE128 barcode directly (`GS k 73`).
+
+#### `printDivider(char?: string, width?: number): Promise<number>`
+Prints horizontal line divider directly.
+
+#### `printTableLine(left: string, right: string, width?: number): Promise<number>`
+Prints 2-column table line directly.
 
 ---
 
-## TypeScript Interfaces
+## Class: `ESCPOSBuilder`
 
-### `PrinterStatus`
+Chainable command builder for constructing ESC/POS command byte buffers directly in JavaScript / TypeScript.
+
 ```typescript
-export interface PrinterStatus {
-  /** Connection mode: 'none' | 'serial' | 'usb' */
-  mode: string;
-  /** Display name of the printer */
-  name: string;
-  /** Connection state boolean */
-  connected: boolean;
-}
+const builder = new ESCPOSBuilder();
+builder
+  .alignCenter()
+  .setFontSize(2, 2)
+  .setBold(true)
+  .textLn("HEADER TITLE")
+  .setFontSize(1, 1)
+  .setBold(false)
+  .divider("-", 32)
+  .tableLine("Item 1", "20.000", 32)
+  .qrCode("https://example.com", 4)
+  .barcodeCODE128("12345678")
+  .cutPaper();
+
+await printer.print(builder);
 ```
 
-### `PrintTextOptions`
-```typescript
-export interface PrintTextOptions {
-  type: 'text';
-  /** Text content string (supports multiline \n) */
-  text: string;
-  /** Alignment: 'left' | 'center' | 'right' (default: 'left') */
-  align?: 'left' | 'center' | 'right';
-  /** Bold font flag (default: false) */
-  bold?: boolean;
-  /** Feed lines count before paper cut (default: 3) */
-  feed?: number;
-  /** Execute ESC/POS paper cut (default: true) */
-  cut?: boolean;
-}
-```
-
-### `PrintImageOptions`
-```typescript
-export interface PrintImageOptions {
-  type: 'image';
-  /** Base64 encoded string or Data URI (e.g. data:image/png;base64,...) */
-  base64: string;
-}
-```
-
-### `PrintRawOptions`
-```typescript
-export interface PrintRawOptions {
-  type: 'raw';
-  /** Raw ESC/POS command bytes */
-  bytes: Uint8Array;
-}
-```
-
-### `PrintPayload`
-```typescript
-export type PrintPayload =
-  | PrintTextOptions
-  | PrintImageOptions
-  | PrintRawOptions
-  | string
-  | Uint8Array;
-```
+### Methods
+- `init()`: Initialize printer (`ESC @`).
+- `alignLeft()`, `alignCenter()`, `alignRight()`: Set text alignment (`ESC a n`).
+- `setFontSize(widthMulti, heightMulti)`: Set font magnification 1-8 (`GS ! n`).
+- `setBold(enable)`: Enable or disable bold mode (`ESC E n`).
+- `text(str)`, `textLn(str)`: Append text string.
+- `newLine(count)`: Append empty lines (`\n`).
+- `cutPaper()`: Execute paper cut (`GS V 65 0`).
+- `divider(char?, lineLength?)`: Append horizontal line divider.
+- `tableLine(left, right, totalWidth?)`: Append 2-column table line with left & right alignment.
+- `qrCode(content, moduleSize?)`: Append hardware QR Code (`GS ( k`).
+- `barcodeCODE128(content)`: Append CODE128 barcode (`GS k 73`).
+- `toBytes()`: Returns compiled `Uint8Array`.

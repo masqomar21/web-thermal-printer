@@ -1,8 +1,8 @@
-# 🖨️ thermal-printer-wasm
+# 🖨️ web-thermal-printer
 
 > **Universal WebAssembly Thermal Printer Gateway for Browser & Node.js with Full TypeScript Support** ⚡
 
-`thermal-printer-wasm` is a lightweight, zero-configuration WebAssembly SDK that connects your web applications (React, Vue, Next.js, Angular, Svelte, or plain JS/TS) directly to **ESC/POS Thermal Receipt Printers** via **Web USB** or **Web Serial API**.
+`web-thermal-printer` is a lightweight, zero-configuration WebAssembly SDK that connects your web applications (React, Vue, Next.js, Angular, Svelte, or plain JS/TS) directly to **ESC/POS Thermal Receipt Printers** via **Web USB** or **Web Serial API**.
 
 Zero background desktop software installation required on client machines.
 
@@ -33,11 +33,11 @@ Zero background desktop software installation required on client machines.
 ## 📦 Installation
 
 ```bash
-npm install thermal-printer-wasm
+npm install web-thermal-printer
 # or
-yarn add thermal-printer-wasm
+yarn add web-thermal-printer
 # or
-pnpm add thermal-printer-wasm
+pnpm add web-thermal-printer
 ```
 
 ---
@@ -47,7 +47,7 @@ pnpm add thermal-printer-wasm
 ### TypeScript / ES Modules (Vite, Next.js, React, Vue, Svelte)
 
 ```typescript
-import { ThermalPrinterSDK, PrintPayload } from 'thermal-printer-wasm';
+import { ThermalPrinterSDK, PrintPayload } from 'web-thermal-printer';
 
 // 1. Instantiate SDK
 const printer = new ThermalPrinterSDK();
@@ -88,7 +88,7 @@ Terima Kasih atas Kunjungan Anda!`,
 ### CommonJS (Node.js)
 
 ```javascript
-const { ThermalPrinterSDK } = require('thermal-printer-wasm');
+const { ThermalPrinterSDK } = require('web-thermal-printer');
 
 const printer = new ThermalPrinterSDK();
 await printer.init();
@@ -100,7 +100,7 @@ console.log('Printer Status:', printer.getStatus());
 
 ```html
 <script type="module">
-  import { ThermalPrinterSDK } from 'https://unpkg.com/thermal-printer-wasm/dist/index.mjs';
+  import { ThermalPrinterSDK } from 'https://unpkg.com/web-thermal-printer/dist/index.mjs';
 
   const printer = new ThermalPrinterSDK();
   await printer.init();
