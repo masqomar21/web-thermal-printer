@@ -10,14 +10,24 @@ export function ensureGoRuntime(): void {
   }
   if (typeof globalThis.crypto === 'undefined') {
     try {
-      if (nodeCrypto && (nodeCrypto as any).webcrypto) {
+      const req = typeof (globalThis as any).require !== 'undefined'
+        ? (globalThis as any).require
+        : (globalThis as any).process?.mainModule?.require;
+      if (req) {
+        (globalThis as any).crypto = req('crypto').webcrypto;
+      } else if (nodeCrypto && (nodeCrypto as any).webcrypto) {
         (globalThis as any).crypto = (nodeCrypto as any).webcrypto;
       }
     } catch (_) {}
   }
   if (typeof globalThis.performance === 'undefined') {
     try {
-      if (perfHooks && (perfHooks as any).performance) {
+      const req = typeof (globalThis as any).require !== 'undefined'
+        ? (globalThis as any).require
+        : (globalThis as any).process?.mainModule?.require;
+      if (req) {
+        (globalThis as any).performance = req('perf_hooks').performance;
+      } else if (perfHooks && (perfHooks as any).performance) {
         (globalThis as any).performance = (perfHooks as any).performance;
       }
     } catch (_) {}
