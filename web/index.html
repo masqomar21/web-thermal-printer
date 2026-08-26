@@ -277,7 +277,8 @@
       <header>
         <h1>🖨️ Universal Web Thermal Printer</h1>
         <p>
-          Customizable Browser Gateway via Web Serial & Web USB API (Controlled 100% from Web JS)
+          Customizable Browser Gateway via Web Serial & Web USB API (Controlled
+          100% from Web JS)
         </p>
       </header>
 
@@ -319,17 +320,24 @@
         <div class="card-title">🎨 Custom Print Studio</div>
 
         <div class="tabs">
-          <button class="tab-btn active" onclick="openTab(event, 'tabText')">📝 Custom Text</button>
-          <button class="tab-btn" onclick="openTab(event, 'tabCanvas')">🖼️ Canvas Graphic</button>
-          <button class="tab-btn" onclick="openTab(event, 'tabRaw')">⚡ Raw ESC/POS Bytes</button>
+          <button class="tab-btn active" onclick="openTab(event, 'tabText')">
+            📝 Custom Text
+          </button>
+          <button class="tab-btn" onclick="openTab(event, 'tabCanvas')">
+            🖼️ Canvas Graphic
+          </button>
+          <button class="tab-btn" onclick="openTab(event, 'tabRaw')">
+            ⚡ Raw ESC/POS Bytes
+          </button>
         </div>
 
         <!-- Tab 1: Custom Text -->
         <div id="tabText" class="tab-content active">
           <div class="form-grid">
-            <div class="form-group" style="grid-column: 1 / -1;">
+            <div class="form-group" style="grid-column: 1 / -1">
               <label>Text Content (Support multiline & custom layouts)</label>
-              <textarea id="customText" rows="6">TOKO UTAMA JAYA
+              <textarea id="customText" rows="6">
+TOKO UTAMA JAYA
 Jl. Mawar No. 88, Jakarta
 --------------------------------
 No Nota : TRX-2026-001
@@ -340,7 +348,8 @@ Roti Toast      1x @15.000 = 15.000
 --------------------------------
 Total                      = 55.000
 ================================
-Terima Kasih atas Kunjungan Anda!</textarea>
+Terima Kasih atas Kunjungan Anda!</textarea
+              >
             </div>
             <div class="form-group">
               <label>Alignment</label>
@@ -374,8 +383,10 @@ Terima Kasih atas Kunjungan Anda!</textarea>
             <label>HTML5 Canvas Graphic Render Preview:</label>
             <canvas id="previewCanvas" width="384" height="140"></canvas>
           </div>
-          <div class="btn-group" style="margin-top: 1rem;">
-            <button id="btnPrintCustomCanvas" class="btn-cyan" disabled>🖼️ Print Canvas Image</button>
+          <div class="btn-group" style="margin-top: 1rem">
+            <button id="btnPrintCustomCanvas" class="btn-cyan" disabled>
+              🖼️ Print Canvas Image
+            </button>
           </div>
         </div>
 
@@ -383,10 +394,16 @@ Terima Kasih atas Kunjungan Anda!</textarea>
         <div id="tabRaw" class="tab-content">
           <div class="form-group">
             <label>ESC/POS Hex or Decimal Bytes (Comma separated):</label>
-            <input type="text" id="rawBytesInput" value="27,64,27,97,49,80,82,73,78,84,69,82,32,79,75,10,10,10,29,86,65,48" />
+            <input
+              type="text"
+              id="rawBytesInput"
+              value="27,64,27,97,49,80,82,73,78,84,69,82,32,79,75,10,10,10,29,86,65,48"
+            />
           </div>
-          <div class="btn-group" style="margin-top: 1rem;">
-            <button id="btnPrintRawBytes" class="btn-outline" disabled>⚡ Send Raw Bytes</button>
+          <div class="btn-group" style="margin-top: 1rem">
+            <button id="btnPrintRawBytes" class="btn-outline" disabled>
+              ⚡ Send Raw Bytes
+            </button>
           </div>
         </div>
       </div>
@@ -417,7 +434,9 @@ Terima Kasih atas Kunjungan Anda!</textarea>
       const btnDisconnect = document.getElementById("btnDisconnect");
 
       const btnPrintCustomText = document.getElementById("btnPrintCustomText");
-      const btnPrintCustomCanvas = document.getElementById("btnPrintCustomCanvas");
+      const btnPrintCustomCanvas = document.getElementById(
+        "btnPrintCustomCanvas",
+      );
       const btnPrintRawBytes = document.getElementById("btnPrintRawBytes");
 
       function log(msg, type = "info") {
@@ -430,10 +449,14 @@ Terima Kasih atas Kunjungan Anda!</textarea>
       }
 
       function openTab(evt, tabName) {
-        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
-        document.getElementById(tabName).classList.add('active');
-        evt.currentTarget.classList.add('active');
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((tc) => tc.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((tb) => tb.classList.remove("active"));
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
       }
 
       function updateUIStatus() {
@@ -472,7 +495,11 @@ Terima Kasih atas Kunjungan Anda!</textarea>
         ctx.fillText("#INV-2026", canvas.width / 2, 75);
 
         ctx.font = "12px Inter, sans-serif";
-        ctx.fillText("100% Client-Side Web Assembly Driver", canvas.width / 2, 115);
+        ctx.fillText(
+          "100% Client-Side Web Assembly Driver",
+          canvas.width / 2,
+          115,
+        );
       }
 
       async function initApp() {
@@ -541,9 +568,12 @@ Terima Kasih atas Kunjungan Anda!</textarea>
             align: align,
             bold: bold,
             cut: cut,
-            feed: 3
+            feed: 3,
           });
-          log(`Custom text printed successfully (${bytesWritten} bytes sent)`, "success");
+          log(
+            `Custom text printed successfully (${bytesWritten} bytes sent)`,
+            "success",
+          );
         } catch (err) {
           log(`Print Custom Text Error: ${err.message || err}`, "error");
         }
@@ -558,9 +588,12 @@ Terima Kasih atas Kunjungan Anda!</textarea>
           log("Sending Image Base64 payload...");
           const bytesWritten = await printer.print({
             type: "image",
-            base64: b64
+            base64: b64,
           });
-          log(`Canvas graphic printed successfully (${bytesWritten} bytes sent)`, "success");
+          log(
+            `Canvas graphic printed successfully (${bytesWritten} bytes sent)`,
+            "success",
+          );
         } catch (err) {
           log(`Print Canvas Error: ${err.message || err}`, "error");
         }
@@ -569,13 +602,16 @@ Terima Kasih atas Kunjungan Anda!</textarea>
       btnPrintRawBytes.addEventListener("click", async () => {
         try {
           const input = document.getElementById("rawBytesInput").value;
-          const byteArray = input.split(",").map(x => parseInt(x.trim(), 10)).filter(x => !isNaN(x));
+          const byteArray = input
+            .split(",")
+            .map((x) => parseInt(x.trim(), 10))
+            .filter((x) => !isNaN(x));
           const uint8Arr = new Uint8Array(byteArray);
 
           log(`Sending Raw ESC/POS Bytes (${uint8Arr.length} bytes)...`);
           const bytesWritten = await printer.print({
             type: "raw",
-            bytes: uint8Arr
+            bytes: uint8Arr,
           });
           log(`Raw Bytes sent successfully (${bytesWritten} bytes)`, "success");
         } catch (err) {
