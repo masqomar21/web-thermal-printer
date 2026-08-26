@@ -4,13 +4,11 @@ package main
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"syscall/js"
 
-	"github.com/masqomar21/antrean-ticket-printer/internal/model"
 	"github.com/masqomar21/antrean-ticket-printer/internal/printer"
 	"github.com/masqomar21/antrean-ticket-printer/internal/renderer"
 )
@@ -26,12 +24,6 @@ func main() {
 	sdkObj.Set("setSerialPort", js.FuncOf(setSerialPort))
 	sdkObj.Set("setUSBDevice", js.FuncOf(setUSBDevice))
 	sdkObj.Set("print", js.FuncOf(printUniversal))
-	sdkObj.Set("printDocument", js.FuncOf(printDocument))
-	sdkObj.Set("printDocumentImage", js.FuncOf(printDocumentImage))
-	sdkObj.Set("printTicket", js.FuncOf(printTicket))
-	sdkObj.Set("printTicketImage", js.FuncOf(printTicketImage))
-	sdkObj.Set("printImageBase64", js.FuncOf(printImageBase64))
-	sdkObj.Set("printRawBytes", js.FuncOf(printRawBytes))
 	sdkObj.Set("testPrint", js.FuncOf(testPrint))
 	sdkObj.Set("close", js.FuncOf(closePrinter))
 	sdkObj.Set("getStatus", js.FuncOf(getStatus))
@@ -66,7 +58,6 @@ func connectSerial(this js.Value, args []js.Value) any {
 			return
 		}
 
-		// Request serial port
 		portPromise := nav.Get("serial").Call("requestPort")
 		port, err := awaitPromise(portPromise)
 		if err != nil {
@@ -74,7 +65,6 @@ func connectSerial(this js.Value, args []js.Value) any {
 			return
 		}
 
-		// Open port
 		openOpts := js.Global().Get("Object").New()
 		openOpts.Set("baudRate", baudRate)
 
@@ -114,7 +104,6 @@ func connectUSB(this js.Value, args []js.Value) any {
 			return
 		}
 
-		// Open & claim device
 		_, err = awaitPromise(device.Call("open"))
 		if err != nil {
 			reject.Invoke(fmt.Sprintf("USB device open failed: %v", err))
@@ -158,6 +147,11 @@ func setUSBDevice(this js.Value, args []js.Value) any {
 	return js.ValueOf(false)
 }
 
+// printUniversal is the single universal print API for JS
+// Accepts:
+// 1. { type: "text", text: "..." }
+// 2. { type: "image", base64: "data:image/png;base64,..." }
+// 3. { type: "raw", bytes: Uint8Array }
 func printUniversal(this js.Value, args []js.Value) any {
 	return newPromise(func(resolve, reject js.Value) {
 		if len(args) == 0 {
@@ -165,38 +159,24 @@ func printUniversal(this js.Value, args []js.Value) any {
 			return
 		}
 
-		payload := args[0]
-		pType := "document"
+		arg := args[0]
+		pType := "text"
 
-		if payload.Type() == js.TypeObject && !payload.Get("type").IsUndefined() {
-			pType = strings.ToLower(payload.Get("type").String())
+		if arg.Type() == js.TypeObject && !arg.Get("type").IsUndefined() {
+			pType = strings.ToLower(arg.Get("type").String())
+		} else if arg.Type() == js.TypeString {
+			pType = "text"
+		} else if arg.Type() == js.TypeObject && !arg.Get("byteLength").IsUndefined() {
+			pType = "raw"
 		}
 
 		switch pType {
-		case "ticket":
-			dataVal := payload
-			if !payload.Get("data").IsUndefined() {
-				dataVal = payload.Get("data")
-			}
-			t, err := parseTicketData(dataVal)
-			if err != nil {
-				reject.Invoke(fmt.Sprintf("invalid ticket payload: %v", err))
-				return
-			}
-			rawBytes := renderer.RenderTextDocument(t.ToDocument())
-			n, err := globalPrinter.Write(rawBytes)
-			if err != nil {
-				reject.Invoke(fmt.Sprintf("print ticket failed: %v", err))
-				return
-			}
-			resolve.Invoke(js.ValueOf(n))
-
 		case "image":
 			b64Str := ""
-			if payload.Type() == js.TypeString {
-				b64Str = payload.String()
-			} else if !payload.Get("base64").IsUndefined() {
-				b64Str = payload.Get("base64").String()
+			if arg.Type() == js.TypeString {
+				b64Str = arg.String()
+			} else if !arg.Get("base64").IsUndefined() {
+				b64Str = arg.Get("base64").String()
 			}
 			if b64Str == "" {
 				reject.Invoke("base64 image payload is required")
@@ -207,12 +187,12 @@ func printUniversal(this js.Value, args []js.Value) any {
 			}
 			imgBytes, err := base64.StdEncoding.DecodeString(b64Str)
 			if err != nil {
-				reject.Invoke(fmt.Sprintf("failed to decode base64: %v", err))
+				reject.Invoke(fmt.Sprintf("failed to decode base64 image: %v", err))
 				return
 			}
 			rawBytes, err := renderer.RenderRawImage(imgBytes)
 			if err != nil {
-				reject.Invoke(fmt.Sprintf("failed to render image: %v", err))
+				reject.Invoke(fmt.Sprintf("failed to render raster image: %v", err))
 				return
 			}
 			n, err := globalPrinter.Write(rawBytes)
@@ -224,10 +204,10 @@ func printUniversal(this js.Value, args []js.Value) any {
 
 		case "raw":
 			var uint8Arr js.Value
-			if !payload.Get("bytes").IsUndefined() {
-				uint8Arr = payload.Get("bytes")
+			if !arg.Get("bytes").IsUndefined() {
+				uint8Arr = arg.Get("bytes")
 			} else {
-				uint8Arr = payload
+				uint8Arr = arg
 			}
 			length := uint8Arr.Get("length").Int()
 			data := make([]byte, length)
@@ -239,208 +219,66 @@ func printUniversal(this js.Value, args []js.Value) any {
 			}
 			resolve.Invoke(js.ValueOf(n))
 
-		default: // "document" or auto-detect
-			dataVal := payload
-			if !payload.Get("data").IsUndefined() {
-				dataVal = payload.Get("data")
-			}
-			doc, err := parseDocumentPayload(dataVal)
-			if err != nil {
-				// Try falling back to TicketData
-				t, tErr := parseTicketData(dataVal)
-				if tErr == nil {
-					doc = t.ToDocument()
-				} else {
-					reject.Invoke(fmt.Sprintf("invalid document payload: %v", err))
-					return
+		default: // "text"
+			textStr := ""
+			align := "left"
+			bold := false
+			cut := true
+			feed := 3
+
+			if arg.Type() == js.TypeString {
+				textStr = arg.String()
+			} else if arg.Type() == js.TypeObject {
+				if !arg.Get("text").IsUndefined() {
+					textStr = arg.Get("text").String()
+				}
+				if !arg.Get("align").IsUndefined() {
+					align = strings.ToLower(arg.Get("align").String())
+				}
+				if !arg.Get("bold").IsUndefined() {
+					bold = arg.Get("bold").Bool()
+				}
+				if !arg.Get("cut").IsUndefined() {
+					cut = arg.Get("cut").Bool()
+				}
+				if !arg.Get("feed").IsUndefined() {
+					feed = arg.Get("feed").Int()
 				}
 			}
 
-			rawBytes := renderer.RenderTextDocument(doc)
-			n, err := globalPrinter.Write(rawBytes)
+			if textStr == "" {
+				reject.Invoke("text payload is required")
+				return
+			}
+
+			b := printer.NewESCPOSBuilder()
+			switch align {
+			case "center":
+				b.AlignCenter()
+			case "right":
+				b.AlignRight()
+			default:
+				b.AlignLeft()
+			}
+			b.SetBold(bold)
+			b.Text(textStr)
+			if !strings.HasSuffix(textStr, "\n") {
+				b.NewLine(1)
+			}
+			if feed > 0 {
+				b.NewLine(feed)
+			}
+			if cut {
+				b.CutPaper()
+			}
+
+			n, err := globalPrinter.Write(b.Bytes())
 			if err != nil {
-				reject.Invoke(fmt.Sprintf("print document failed: %v", err))
+				reject.Invoke(fmt.Sprintf("print text failed: %v", err))
 				return
 			}
 			resolve.Invoke(js.ValueOf(n))
 		}
-	})
-}
-
-func printDocument(this js.Value, args []js.Value) any {
-	return newPromise(func(resolve, reject js.Value) {
-		if len(args) == 0 {
-			reject.Invoke("document payload is required")
-			return
-		}
-
-		doc, err := parseDocumentPayload(args[0])
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("invalid document payload: %v", err))
-			return
-		}
-
-		rawBytes := renderer.RenderTextDocument(doc)
-		n, err := globalPrinter.Write(rawBytes)
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("print document failed: %v", err))
-			return
-		}
-
-		resolve.Invoke(js.ValueOf(n))
-	})
-}
-
-func printDocumentImage(this js.Value, args []js.Value) any {
-	return newPromise(func(resolve, reject js.Value) {
-		if len(args) == 0 {
-			reject.Invoke("document payload is required")
-			return
-		}
-
-		widthDots := 576
-		if len(args) > 1 && !args[1].IsUndefined() && args[1].Type() == js.TypeNumber {
-			widthDots = args[1].Int()
-		}
-
-		doc, err := parseDocumentPayload(args[0])
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("invalid document payload: %v", err))
-			return
-		}
-
-		rawBytes := renderer.RenderImageDocument(doc, widthDots)
-		n, err := globalPrinter.Write(rawBytes)
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("print document image failed: %v", err))
-			return
-		}
-
-		resolve.Invoke(js.ValueOf(n))
-	})
-}
-
-func parseDocumentPayload(val js.Value) (model.PrintDocument, error) {
-	var doc model.PrintDocument
-	if val.Type() == js.TypeString {
-		err := json.Unmarshal([]byte(val.String()), &doc)
-		return doc, err
-	} else if val.Type() == js.TypeObject {
-		jsonCtor := js.Global().Get("JSON")
-		jsonStr := jsonCtor.Call("stringify", val).String()
-		err := json.Unmarshal([]byte(jsonStr), &doc)
-		return doc, err
-	}
-	return doc, errors.New("expected JSON string or JS Object")
-}
-
-func printTicket(this js.Value, args []js.Value) any {
-	return newPromise(func(resolve, reject js.Value) {
-		if len(args) == 0 {
-			reject.Invoke("ticket data payload is required")
-			return
-		}
-
-		data, err := parseTicketData(args[0])
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("invalid ticket payload: %v", err))
-			return
-		}
-
-		rawBytes := renderer.RenderTextTicket(data)
-		n, err := globalPrinter.Write(rawBytes)
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("print failed: %v", err))
-			return
-		}
-
-		resolve.Invoke(js.ValueOf(n))
-	})
-}
-
-func printTicketImage(this js.Value, args []js.Value) any {
-	return newPromise(func(resolve, reject js.Value) {
-		if len(args) == 0 {
-			reject.Invoke("ticket data payload is required")
-			return
-		}
-
-		widthDots := 576
-		if len(args) > 1 && !args[1].IsUndefined() && args[1].Type() == js.TypeNumber {
-			widthDots = args[1].Int()
-		}
-
-		data, err := parseTicketData(args[0])
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("invalid ticket payload: %v", err))
-			return
-		}
-
-		rawBytes := renderer.RenderImageTicket(data, widthDots)
-		n, err := globalPrinter.Write(rawBytes)
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("print image ticket failed: %v", err))
-			return
-		}
-
-		resolve.Invoke(js.ValueOf(n))
-	})
-}
-
-func printImageBase64(this js.Value, args []js.Value) any {
-	return newPromise(func(resolve, reject js.Value) {
-		if len(args) == 0 || args[0].Type() != js.TypeString {
-			reject.Invoke("base64 image string is required")
-			return
-		}
-
-		b64Str := args[0].String()
-		// Strip Data URL prefix if present (e.g. data:image/png;base64,...)
-		if idx := strings.Index(b64Str, ","); idx != -1 {
-			b64Str = b64Str[idx+1:]
-		}
-
-		imgBytes, err := base64.StdEncoding.DecodeString(b64Str)
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("failed to decode base64 image: %v", err))
-			return
-		}
-
-		rawBytes, err := renderer.RenderRawImage(imgBytes)
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("failed to render raster image: %v", err))
-			return
-		}
-
-		n, err := globalPrinter.Write(rawBytes)
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("print image failed: %v", err))
-			return
-		}
-
-		resolve.Invoke(js.ValueOf(n))
-	})
-}
-
-func printRawBytes(this js.Value, args []js.Value) any {
-	return newPromise(func(resolve, reject js.Value) {
-		if len(args) == 0 {
-			reject.Invoke("Uint8Array data is required")
-			return
-		}
-
-		uint8Arr := args[0]
-		length := uint8Arr.Get("length").Int()
-		data := make([]byte, length)
-		js.CopyBytesToGo(data, uint8Arr)
-
-		n, err := globalPrinter.Write(data)
-		if err != nil {
-			reject.Invoke(fmt.Sprintf("write raw bytes failed: %v", err))
-			return
-		}
-
-		resolve.Invoke(js.ValueOf(n))
 	})
 }
 
@@ -473,20 +311,6 @@ func getStatus(this js.Value, args []js.Value) any {
 	res.Set("name", globalPrinter.Name())
 	res.Set("connected", mode != "none")
 	return res
-}
-
-func parseTicketData(val js.Value) (model.TicketData, error) {
-	var data model.TicketData
-	if val.Type() == js.TypeString {
-		err := json.Unmarshal([]byte(val.String()), &data)
-		return data, err
-	} else if val.Type() == js.TypeObject {
-		jsonCtor := js.Global().Get("JSON")
-		jsonStr := jsonCtor.Call("stringify", val).String()
-		err := json.Unmarshal([]byte(jsonStr), &data)
-		return data, err
-	}
-	return data, errors.New("expected JSON string or JS Object")
 }
 
 func awaitPromise(promise js.Value) (js.Value, error) {

@@ -1,7 +1,7 @@
 /**
  * Thermal Printer WebAssembly SDK
  * Connects directly to ESC/POS thermal printers via Web Serial or Web USB API.
- * No background desktop installation required.
+ * Pure Client-side Browser Gateway.
  */
 class ThermalPrinterSDK {
   constructor() {
@@ -92,44 +92,21 @@ class ThermalPrinterSDK {
   }
 
   /**
-   * Print structured Queue Ticket in Text ESC/POS Mode
-   * @param {Object|string} ticketData Ticket object: { instansi, loket, nomor_antrean, tanggal, jam, layanan }
+   * Universal Print Method
+   * Accepts:
+   * 1. { type: "text", text: "Hello World", align: "center", bold: true, cut: true, feed: 3 }
+   * 2. { type: "image", base64: "data:image/png;base64,..." }
+   * 3. { type: "raw", bytes: Uint8Array }
+   * 4. String or Uint8Array directly
+   * @param {Object|string|Uint8Array} payload 
    */
-  async printTicket(ticketData) {
+  async print(payload) {
     this.ensureInitialized();
-    return window.ThermalPrinterWASM.printTicket(ticketData);
+    return window.ThermalPrinterWASM.print(payload);
   }
 
   /**
-   * Print structured Queue Ticket in Graphic Raster ESC/POS Mode
-   * @param {Object|string} ticketData 
-   * @param {number} widthDots Printer width in dots (default 576 for 80mm, 384 for 58mm)
-   */
-  async printTicketImage(ticketData, widthDots = 576) {
-    this.ensureInitialized();
-    return window.ThermalPrinterWASM.printTicketImage(ticketData, widthDots);
-  }
-
-  /**
-   * Print raw image from Base64 string or Data URI (PNG / JPEG)
-   * @param {string} base64Str Base64 encoded image string or Data URL
-   */
-  async printImageBase64(base64Str) {
-    this.ensureInitialized();
-    return window.ThermalPrinterWASM.printImageBase64(base64Str);
-  }
-
-  /**
-   * Print raw byte array of ESC/POS commands
-   * @param {Uint8Array} uint8Array Raw byte buffer
-   */
-  async printRawBytes(uint8Array) {
-    this.ensureInitialized();
-    return window.ThermalPrinterWASM.printRawBytes(uint8Array);
-  }
-
-  /**
-   * Send test print ticket
+   * Send test print
    */
   async testPrint() {
     this.ensureInitialized();

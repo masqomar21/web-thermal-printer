@@ -5,8 +5,6 @@ import (
 	"log"
 	"net"
 	"os"
-
-	"github.com/masqomar21/antrean-ticket-printer/internal/config"
 )
 
 // Printer represents a generic printer device interface
@@ -18,22 +16,6 @@ type Printer interface {
 	Name() string
 }
 
-// NewPrinter creates a printer implementation based on configuration
-func NewPrinter(cfg config.PrinterConfig) (Printer, error) {
-	switch cfg.Type {
-	case "net", "network", "tcp":
-		return NewNetPrinter(cfg.IPAddress), nil
-	case "file", "raw", "device":
-		return NewFilePrinter(cfg.SerialPort), nil
-	case "system", "spooler":
-		return NewSystemPrinter(cfg.SystemPrinter), nil
-	case "usb":
-		return NewUSBPrinter(cfg.VendorID, cfg.ProductID, cfg.SerialPort), nil
-	default:
-		// Default to USB / Auto-detect fallback
-		return NewUSBPrinter(cfg.VendorID, cfg.ProductID, cfg.SerialPort), nil
-	}
-}
 
 // NetPrinter communicates over TCP (e.g. 192.168.1.200:9100)
 type NetPrinter struct {
