@@ -26,16 +26,33 @@ fs.writeFileSync(
 
 const wasmExecJsPath = path.join(rootDir, 'web', 'wasm_exec.js');
 if (fs.existsSync(wasmExecJsPath)) {
-    let wasmExecJsCode = fs.readFileSync(wasmExecJsPath, 'utf-8');
-  const polyfillSnippet = `\n\tif (!globalThis.crypto) {\n\t\tif (typeof require !== "undefined") {\n\t\t\ttry { globalThis.crypto = require("crypto").webcrypto; } catch (e) {}\n\t\t}\n\t}\n\tif (!globalThis.performance) {\n\t\tif (typeof require !== "undefined") {\n\t\t\ttry { globalThis.performance = require("perf_hooks").performance; } catch (e) {}\n\t\t}\n\t}\n`;
-  wasmExecJsCode = wasmExecJsCode.replace('if (!globalThis.crypto) {', polyfillSnippet + '\tif (!globalThis.crypto) {');
+  const wasmExecJsCode = fs.readFileSync(wasmExecJsPath, 'utf-8');
   const wasmRuntimeTsPath = path.join(rootDir, 'src', 'wasm_exec_runtime.ts');
   fs.writeFileSync(
     wasmRuntimeTsPath,
     `// Auto-generated during build from official Go wasm_exec.js
+// @ts-ignore
+import * as nodeCrypto from 'node:crypto';
+// @ts-ignore
+import * as perfHooks from 'perf_hooks';
+
 export function ensureGoRuntime(): void {
   if (typeof (globalThis as any).Go !== 'undefined') {
     return;
+  }
+  if (typeof globalThis.crypto === 'undefined') {
+    try {
+      if (nodeCrypto && (nodeCrypto as any).webcrypto) {
+        (globalThis as any).crypto = (nodeCrypto as any).webcrypto;
+      }
+    } catch (_) {}
+  }
+  if (typeof globalThis.performance === 'undefined') {
+    try {
+      if (perfHooks && (perfHooks as any).performance) {
+        (globalThis as any).performance = (perfHooks as any).performance;
+      }
+    } catch (_) {}
   }
   const runCode = new Function(${JSON.stringify(wasmExecJsCode)});
   runCode();
@@ -59,6 +76,7 @@ esbuild.buildSync({
   outfile: path.join(distDir, 'index.mjs'),
   bundle: true,
   format: 'esm',
+  external: ['node:crypto', 'crypto', 'perf_hooks'],
   target: 'es2020',
   sourcemap: true,
 });
@@ -69,6 +87,7 @@ esbuild.buildSync({
   outfile: path.join(distDir, 'index.cjs'),
   bundle: true,
   format: 'cjs',
+  external: ['node:crypto', 'crypto', 'perf_hooks'],
   target: 'es2020',
   sourcemap: true,
 });
@@ -79,6 +98,7 @@ esbuild.buildSync({
   outfile: path.join(distDir, 'index.global.js'),
   bundle: true,
   format: 'iife',
+  external: ['node:crypto', 'crypto', 'perf_hooks'],
   globalName: 'ThermalPrinterWASM',
   target: 'es2020',
   sourcemap: true,
