@@ -1,5 +1,5 @@
 {
-  "name": "thermal-printer-wasm",
+  "name": "web-thermal-printer",
   "version": "1.0.0",
   "description": "Universal WebAssembly Thermal Printer SDK for Browser & Node.js with TypeScript support",
   "main": "./dist/index.cjs",
