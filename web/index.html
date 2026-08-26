@@ -504,7 +504,7 @@ Terima Kasih atas Kunjungan Anda!</textarea
 
       async function initApp() {
         try {
-          await printer.init("./printer.wasm");
+          await printer.init();
           log("Go WASM Universal Printer Gateway loaded ready.", "success");
           drawSampleCanvas();
         } catch (err) {

@@ -1,0 +1,39 @@
+{
+  "name": "thermal-printer-wasm",
+  "version": "1.0.0",
+  "description": "Universal WebAssembly Thermal Printer SDK for Browser & Node.js with TypeScript support",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build:wasm": "bash build-wasm.sh",
+    "build": "node scripts/build-package.js",
+    "test": "node scripts/test-package.js"
+  },
+  "keywords": [
+    "escpos",
+    "thermal-printer",
+    "web-serial",
+    "web-usb",
+    "wasm",
+    "webassembly",
+    "typescript"
+  ],
+  "author": "masqomar21",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  }
+}
