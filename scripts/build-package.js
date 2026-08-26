@@ -26,7 +26,9 @@ fs.writeFileSync(
 
 const wasmExecJsPath = path.join(rootDir, 'web', 'wasm_exec.js');
 if (fs.existsSync(wasmExecJsPath)) {
-  const wasmExecJsCode = fs.readFileSync(wasmExecJsPath, 'utf-8');
+    let wasmExecJsCode = fs.readFileSync(wasmExecJsPath, 'utf-8');
+  const polyfillSnippet = `\n\tif (!globalThis.crypto) {\n\t\tif (typeof require !== "undefined") {\n\t\t\ttry { globalThis.crypto = require("crypto").webcrypto; } catch (e) {}\n\t\t}\n\t}\n\tif (!globalThis.performance) {\n\t\tif (typeof require !== "undefined") {\n\t\t\ttry { globalThis.performance = require("perf_hooks").performance; } catch (e) {}\n\t\t}\n\t}\n`;
+  wasmExecJsCode = wasmExecJsCode.replace('if (!globalThis.crypto) {', polyfillSnippet + '\tif (!globalThis.crypto) {');
   const wasmRuntimeTsPath = path.join(rootDir, 'src', 'wasm_exec_runtime.ts');
   fs.writeFileSync(
     wasmRuntimeTsPath,
