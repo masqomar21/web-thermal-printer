@@ -13,6 +13,12 @@ async function runTests() {
   assert.ok(esmModule.ThermalPrinterSDK, 'ThermalPrinterSDK should be exported in ESM');
   const printerESM = new esmModule.ThermalPrinterSDK();
   assert.ok(printerESM, 'ThermalPrinterSDK instance created in ESM');
+
+  console.log('🧪 Testing printer.init() WebAssembly instantiation...');
+  await printerESM.init();
+  const status = printerESM.getStatus();
+  assert.ok(status, 'getStatus() returned printer status');
+  console.log('✅ WASM printer engine initialized successfully! Mode:', status.mode);
   console.log('✅ ESM export verified successfully');
 
   console.log('🎉 All package export tests passed cleanly!');

@@ -417,11 +417,10 @@ Terima Kasih atas Kunjungan Anda!</textarea
       </div>
     </div>
 
-    <!-- Load Go WASM Runtime & SDK -->
-    <script src="wasm_exec.js"></script>
-    <script src="printer-sdk.js"></script>
+    <!-- Import built TypeScript ES Module library directly -->
+    <script type="module">
+      import { ThermalPrinterSDK } from "../dist/index.mjs";
 
-    <script>
       const printer = new ThermalPrinterSDK();
 
       const logBox = document.getElementById("logBox");

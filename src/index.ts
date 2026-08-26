@@ -62,7 +62,7 @@ export class ThermalPrinterSDK {
         throw new Error('Embedded WASM binary is empty. Run npm run build first.');
       }
       const bytes = this.base64ToUint8Array(EMBEDDED_WASM_BASE64);
-      const res: any = await WebAssembly.instantiate(bytes.buffer, go.importObject);
+      const res: any = await WebAssembly.instantiate(bytes, go.importObject);
       instance = res.instance || res;
     }
 

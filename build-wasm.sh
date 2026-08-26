@@ -14,6 +14,9 @@ if [ ! -f "web/wasm_exec.js" ]; then
     fi
 fi
 
+mkdir -p dist
 GOOS=js GOARCH=wasm go build -v -o web/printer.wasm ./cmd/wasm-printer
+cp web/printer.wasm dist/printer.wasm
 
-echo "✅ Build successful! Output: web/printer.wasm"
+echo "✅ Build successful! Output: web/printer.wasm and dist/printer.wasm"
+

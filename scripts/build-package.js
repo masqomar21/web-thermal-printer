@@ -16,13 +16,31 @@ if (!fs.existsSync(wasmPath)) {
   process.exit(1);
 }
 
-console.log('📦 Step 2: Embedding printer.wasm as Base64 into src/embedded_wasm.ts...');
+console.log('📦 Step 2: Embedding printer.wasm & wasm_exec.js into TypeScript source...');
 const wasmBuffer = fs.readFileSync(wasmPath);
 const wasmBase64 = wasmBuffer.toString('base64');
 fs.writeFileSync(
   embeddedWasmTsPath,
   `// Auto-generated during build\nexport const EMBEDDED_WASM_BASE64 = "${wasmBase64}";\n`
 );
+
+const wasmExecJsPath = path.join(rootDir, 'web', 'wasm_exec.js');
+if (fs.existsSync(wasmExecJsPath)) {
+  const wasmExecJsCode = fs.readFileSync(wasmExecJsPath, 'utf-8');
+  const wasmRuntimeTsPath = path.join(rootDir, 'src', 'wasm_exec_runtime.ts');
+  fs.writeFileSync(
+    wasmRuntimeTsPath,
+    `// Auto-generated during build from official Go wasm_exec.js
+export function ensureGoRuntime(): void {
+  if (typeof (globalThis as any).Go !== 'undefined') {
+    return;
+  }
+  const runCode = new Function(${JSON.stringify(wasmExecJsCode)});
+  runCode();
+}
+`
+  );
+}
 
 console.log('⚡ Step 3: Generating TypeScript declaration (.d.ts) files...');
 try {
@@ -53,7 +71,20 @@ esbuild.buildSync({
   sourcemap: true,
 });
 
+// Build Global IIFE (.global.js)
+esbuild.buildSync({
+  entryPoints: [path.join(rootDir, 'src', 'index.ts')],
+  outfile: path.join(distDir, 'index.global.js'),
+  bundle: true,
+  format: 'iife',
+  globalName: 'ThermalPrinterWASM',
+  target: 'es2020',
+  sourcemap: true,
+});
+
 console.log('✨ Build finished successfully! Outputs:');
 console.log('   - ESM: dist/index.mjs');
 console.log('   - CJS: dist/index.cjs');
+console.log('   - IIFE: dist/index.global.js');
 console.log('   - Types: dist/index.d.ts');
+
