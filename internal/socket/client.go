@@ -15,6 +15,7 @@ import (
 	"github.com/masqomar21/antrean-ticket-printer/internal/model"
 )
 
+type DocumentHandlerFunc func(doc model.PrintDocument) error
 type TicketHandlerFunc func(data model.TicketData) error
 
 type Client struct {
@@ -22,7 +23,7 @@ type Client struct {
 	conn         *websocket.Conn
 	mu           sync.Mutex
 	isConnected  bool
-	handler      TicketHandlerFunc
+	docHandler   DocumentHandlerFunc
 	stopChan     chan struct{}
 	reconnectSec time.Duration
 }
@@ -33,18 +34,19 @@ type engineIOHandshake struct {
 	PingTimeout  int    `json:"pingTimeout"`
 }
 
-func NewClient(cfg config.SocketConfig, handler TicketHandlerFunc) *Client {
+func NewClient(cfg config.SocketConfig, handler DocumentHandlerFunc) *Client {
 	interval := cfg.ReconnectIntervalMs
 	if interval <= 0 {
 		interval = 5000
 	}
 	return &Client{
 		cfg:          cfg,
-		handler:      handler,
+		docHandler:   handler,
 		stopChan:     make(chan struct{}),
 		reconnectSec: time.Duration(interval) * time.Millisecond,
 	}
 }
+
 
 func (c *Client) Start() {
 	go c.connectLoop()
@@ -218,32 +220,45 @@ func (c *Client) parseAndHandleEvent(payload string) {
 
 	log.Printf("📩 Socket event received: %s", eventName)
 
-	if eventName == c.cfg.TopicPrintNomorAntrean || eventName == "antrean_print" {
+	if eventName == c.cfg.TopicPrintDocument || eventName == "print_document" || eventName == "document_print" {
+		if len(rawArray) > 1 {
+			var doc model.PrintDocument
+			if err := json.Unmarshal(rawArray[1], &doc); err == nil {
+				log.Printf("🖨️ Generic Document print payload received")
+				c.executePrint(doc, ackID)
+			} else {
+				log.Printf("⚠️ Failed to parse document payload: %v", err)
+			}
+		}
+	} else if eventName == c.cfg.TopicPrintNomorAntrean || eventName == "antrean_print" {
 		if len(rawArray) > 1 {
 			var ticket model.TicketData
 			if err := json.Unmarshal(rawArray[1], &ticket); err == nil {
-				log.Printf("🖨️ Ticket print payload: %+v", ticket)
-
-				if c.handler != nil {
-					err := c.handler(ticket)
-					if err != nil {
-						log.Printf("❌ Print error: %v", err)
-						c.EmitStatus("error", err.Error())
-					} else {
-						log.Println("✅ Print completed successfully")
-						c.EmitStatus("printed", "")
-					}
-				}
-
-				if ackID != "" {
-					c.sendAck(ackID, "ok")
-				}
+				log.Printf("🖨️ Ticket print payload received: %+v", ticket)
+				c.executePrint(ticket.ToDocument(), ackID)
 			} else {
 				log.Printf("⚠️ Failed to parse ticket payload: %v", err)
 			}
 		}
 	}
 }
+
+func (c *Client) executePrint(doc model.PrintDocument, ackID string) {
+	if c.docHandler != nil {
+		err := c.docHandler(doc)
+		if err != nil {
+			log.Printf("❌ Print error: %v", err)
+			c.EmitStatus("error", err.Error())
+		} else {
+			log.Println("✅ Print completed successfully")
+			c.EmitStatus("printed", "")
+		}
+	}
+	if ackID != "" {
+		c.sendAck(ackID, "ok")
+	}
+}
+
 
 func (c *Client) EmitStatus(status string, message string) {
 	payload := model.PrintStatusPayload{

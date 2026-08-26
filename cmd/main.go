@@ -35,8 +35,8 @@ func main() {
 	go printSvc.EnsurePrinterReady()
 
 	// 4. Initialize Socket.IO Client
-	client := socket.NewClient(cfg.Socket, func(data model.TicketData) error {
-		return printSvc.PrintTicket(data)
+	client := socket.NewClient(cfg.Socket, func(doc model.PrintDocument) error {
+		return printSvc.PrintDocument(doc)
 	})
 
 	// 5. Start Socket Client Connection

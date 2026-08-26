@@ -12,9 +12,11 @@ import (
 type SocketConfig struct {
 	URL                     string `json:"url"`
 	TopicPrintNomorAntrean string `json:"topic_print_nomor_antrean"`
+	TopicPrintDocument      string `json:"topic_print_document"`
 	TopicStatus             string `json:"topic_status"`
 	ReconnectIntervalMs     int    `json:"reconnect_interval_ms"`
 }
+
 
 type PrinterConfig struct {
 	Type           string `json:"type"`             // "usb", "net", "serial", "system"
@@ -43,6 +45,7 @@ func LoadConfig() (*AppConfig, error) {
 		Socket: SocketConfig{
 			URL:                     getEnv("SOCKET_URL", "https://be.simpuskes.com"),
 			TopicPrintNomorAntrean: getEnv("TOPIC_PRINT_NOMOR_ANTREAN", "antrean_print"),
+			TopicPrintDocument:      getEnv("TOPIC_PRINT_DOCUMENT", "print_document"),
 			TopicStatus:             getEnv("TOPIC_STATUS", "status"),
 			ReconnectIntervalMs:     getEnvInt("RECONNECT_INTERVAL_MS", 5000),
 		},

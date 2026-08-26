@@ -49,22 +49,31 @@ func (s *PrintService) EnsurePrinterReady() {
 }
 
 func (s *PrintService) PrintTicket(data model.TicketData) error {
+	return s.PrintDocument(data.ToDocument())
+}
+
+func (s *PrintService) PrintDocument(doc model.PrintDocument) error {
 	start := time.Now()
-	log.Printf("📄 Processing ticket for Loket: %s, Nomor: %s", data.Loket, data.NomorAntrean)
+	log.Println("📄 Processing generic print document...")
 
 	var payload []byte
 	mode := strings.ToLower(s.cfg.RenderMode)
 
+	if doc.Options != nil && doc.Options.RenderMode != "" {
+		mode = strings.ToLower(doc.Options.RenderMode)
+	}
+
 	switch mode {
 	case "image", "raster":
-		log.Println("🖼️ Rendering ticket in Image/Raster mode...")
-		payload = renderer.RenderImageTicket(data, s.cfg.PaperWidthDots)
-	case "both":
-		log.Println("🖨️ Rendering ticket in Text & Graphic dual mode...")
-		payload = renderer.RenderTextTicket(data)
+		widthDots := s.cfg.PaperWidthDots
+		if doc.Options != nil && doc.Options.PaperWidthDots > 0 {
+			widthDots = doc.Options.PaperWidthDots
+		}
+		log.Println("🖼️ Rendering document in Image/Raster mode...")
+		payload = renderer.RenderImageDocument(doc, widthDots)
 	default: // "text"
-		log.Println("📝 Rendering ticket in Direct ESC/POS Text mode...")
-		payload = renderer.RenderTextTicket(data)
+		log.Println("📝 Rendering document in ESC/POS Text mode...")
+		payload = renderer.RenderTextDocument(doc)
 	}
 
 	if err := s.printer.Open(); err != nil {
@@ -80,3 +89,4 @@ func (s *PrintService) PrintTicket(data model.TicketData) error {
 	log.Printf("✅ Print finished in %v", elapsed)
 	return nil
 }
+
